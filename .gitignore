@@ -1,3 +1,10 @@
+# Rider IDE files
+.idea/
+_ReSharper.Caches/
+
+# Rider dev plugin
+Plugins/Developer/RiderLink/
+
 # Visual Studio 2015 user specific files
 .vs/
 
