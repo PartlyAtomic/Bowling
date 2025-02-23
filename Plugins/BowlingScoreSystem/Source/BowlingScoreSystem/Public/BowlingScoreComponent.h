@@ -53,6 +53,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category=Bowling)
 	int32 GetScore(int32 Frame) const;
 
+	// Get the specified shot's score
+	UFUNCTION(BlueprintCallable, Category=Bowling)
+	int32 GetShotScore(int32 Frame, int32 Shot) const;
+	
 	// Get the specified frame's score
 	UFUNCTION(BlueprintCallable, Category=Bowling)
 	int32 GetFrameScore(int32 Frame) const;

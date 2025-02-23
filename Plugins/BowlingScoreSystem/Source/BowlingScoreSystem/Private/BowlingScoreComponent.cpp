@@ -33,6 +33,7 @@ void UBowlingScoreComponent::Reset()
 		FrameScores[FrameIdx].Shots.SetNum(FrameIdx == 9 ? 3 : 2);
 	}
 	OnReset.Broadcast(this);
+	OnGameAdvanced.Broadcast(this, GetCurrentFrameNum(), GetCurrentShotNum());
 }
 
 int32 UBowlingScoreComponent::GetCurrentFrameNum() const
@@ -57,6 +58,18 @@ int32 UBowlingScoreComponent::GetScore(int32 Frame) const
 	}
 
 	return Score;
+}
+
+int32 UBowlingScoreComponent::GetShotScore(int32 Frame, int32 Shot) const
+{
+	auto FrameIdx = Frame - 1;
+	auto ShotIdx = Shot - 1;
+
+	if (not FrameScores.IsValidIndex(FrameIdx)) { return 0; }
+	auto& CurrentFrame = FrameScores[FrameIdx];
+	if (not CurrentFrame.Shots.IsValidIndex(ShotIdx)) { return 0; }
+
+	return CurrentFrame.Shots[ShotIdx];
 }
 
 int32 UBowlingScoreComponent::GetFrameScore(int32 Frame) const
@@ -191,30 +204,38 @@ bool UBowlingScoreComponent::SetScore(int32 Score, int32 Frame, int32 Shot)
 	auto IsGameOver = false;
 
 	// Advance shot and frame as necessary
-	if (Shot == 1)
+	if (Frame < 10)
 	{
-		// Shot 1 always advances, but a strike will advance to the next frame
-		if (Score == 10)
+		if (Shot == 1)
 		{
-			// A strike will advance frames
-			CurrentShotIndex = ShotIdx;
+			// Shot 1 always advances, but a strike will advance to the next frame
+			if (Score == 10)
+			{
+				// A strike will advance frames
+				CurrentShotIndex = ShotIdx;
+				CurrentFrameIndex = FrameIdx + 1;
+			}
+			else
+			{
+				// Everything else will advance to the next shot
+				CurrentShotIndex = ShotIdx + 1;
+				CurrentFrameIndex = FrameIdx;
+			}
+		} else if (Shot == 2)
+		{
+			// Shot 2 on frames other than 10 advances to the next frame
+			CurrentShotIndex = 0;
 			CurrentFrameIndex = FrameIdx + 1;
 		}
-		else
-		{
-			// Everything else will advance to the next shot
-			CurrentShotIndex = ShotIdx + 1;
-			CurrentFrameIndex = FrameIdx;
-		}
-	}
-	else if (Shot == 2 and Frame < 10)
-	{
-		// Shot 2 on frames other than 10 advances to the next frame
-		CurrentShotIndex = 0;
-		CurrentFrameIndex = FrameIdx + 1;
 	}
 	else if (Frame == 10)
 	{
+		if (Shot == 1)
+		{
+			// Shot 1 always advances to the next shot
+			CurrentShotIndex = ShotIdx + 1;
+			CurrentFrameIndex = FrameIdx;
+		}
 		if (Shot == 2)
 		{
 			// Third shot is only allowed if there's a Strike on Shot 1 or Spare on Shot 2
