@@ -169,7 +169,7 @@ bool UBowlingScoreComponent::IsValidShotScore(int32 Score, int32 Frame, int32 Sh
 
 		// If Shot 1 was a strike and Shot 2 wasn't (so the pins weren't reset for Shot 3), then Shot 3 can only be up to a spare
 		if (Shot == 3 and CurrentFrame.Shots[0] == 10
-			and CurrentFrame.Shots[1] != 10 and (Score + CurrentFrame.Shots[2]> 10)) { return false; }
+			and CurrentFrame.Shots[1] != 10 and (Score + CurrentFrame.Shots[1]> 10)) { return false; }
 	}
 
 	return true;
