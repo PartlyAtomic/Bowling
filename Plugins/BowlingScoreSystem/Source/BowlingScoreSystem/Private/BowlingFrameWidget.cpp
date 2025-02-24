@@ -28,7 +28,7 @@ void UBowlingFrameWidget::SetFrame_Implementation(int32 InFrameNumber)
 
 void UBowlingFrameWidget::Reset()
 {
-	// Reset textboxes to disabled and clear contents
+	// Reset textboxes to disabled input and clear contents
 	for (auto&& TextBox : {Shot1TextBox, Shot2TextBox, Shot3TextBox})
 	{
 		if (!IsValid(TextBox)) { continue; }
@@ -55,13 +55,12 @@ void UBowlingFrameWidget::SetCurrentGameState(int32 CurrentFrame, int32 CurrentS
 	{
 		if (not ensure(ShotBoxes.IsValidIndex(CurrentShotIndex))) { return; }
 		auto* ShotBox = ShotBoxes[CurrentShotIndex];
-		if (not ensure(ShotBox)) { return; }
+		if (not ensure(IsValid(ShotBox))) { return; }
 
 		// The textboxes will be disabled after submitting a score
 		ShotBox->SetIsReadOnly(false);
 		ShotBox->SetIsEnabled(true);
 		SetDesiredFocusWidget(ShotBox);
-		// ShotBox->SetFocus();
 		SetFocus();
 	}
 }
@@ -75,7 +74,7 @@ void UBowlingFrameWidget::UpdateScore()
 		if (not ensure(IsValid(BowlingScoreComponent))) { return; }
 
 		auto Score = BowlingScoreComponent->GetScore(FrameNumber);
-		
+
 		ScoreText->SetText(FText::Format(INVTEXT("{0}"), {Score}));
 	}
 }
@@ -87,11 +86,9 @@ bool UBowlingFrameWidget::IsFinalFrame() const
 
 UBowlingScoreComponent* UBowlingFrameWidget::GetBowlingScoreComponent() const
 {
-	auto* PlayerController = GetOwningPlayer();
-	if (!ensure(PlayerController)) { return nullptr; }
-
-	auto* PlayerState = PlayerController->GetPlayerState<APlayerState>();
-	if (!ensure(PlayerState)) { return nullptr; }
+	// BowlingScoreComponent lives on PlayerState
+	auto* PlayerState = GetOwningPlayerState();
+	if (not ensure(IsValid(PlayerState))) { return nullptr; }
 
 	return PlayerState->GetComponentByClass<UBowlingScoreComponent>();
 }
@@ -117,15 +114,16 @@ void UBowlingFrameWidget::ValidateTextEntry(const FText& Text, int32 Shot)
 	if (Text.IsEmpty()) { return; }
 
 	TArray<UEditableTextBox*> TextBoxes = {Shot1TextBox, Shot2TextBox, Shot3TextBox};
-	
-	if (not TextBoxes.IsValidIndex(Shot - 1)) { return; }
+
+	if (not ensure(TextBoxes.IsValidIndex(Shot - 1))) { return; }
 	auto* TextBox = TextBoxes[Shot - 1];
-	
-	if (not ensureMsgf(TextBox, TEXT("Could not find modified textbox")))
+
+	if (not ensureMsgf(IsValid(TextBox), TEXT("Could not find modified textbox")))
 	{
 		return;
 	}
 
+	// Only accept the first character
 	auto StringText = Text.ToString();
 	if (StringText.Len() > 1)
 	{
@@ -134,21 +132,21 @@ void UBowlingFrameWidget::ValidateTextEntry(const FText& Text, int32 Shot)
 	}
 
 	auto* BowlingScoreComponent = GetBowlingScoreComponent();
-	if (!ensure(BowlingScoreComponent))
+	if (not ensure(IsValid(BowlingScoreComponent)))
 	{
 		TextBox->SetText(FText::GetEmpty());
 		return;
 	}
-	
+
 	auto Success = false;
-	
+
 	if (StringText == "X" or StringText == "x" or StringText == "/")
 	{
 		// Convert spare to numeric representations and validate score
 		if (StringText == "/")
 		{
-			// Need to convert spare into a number.
-			if (FrameNumber == 10)
+			// Convert spare into a number.
+			if (IsFinalFrame())
 			{
 				if (Shot == 2 or Shot == 3)
 				{
@@ -170,12 +168,12 @@ void UBowlingFrameWidget::ValidateTextEntry(const FText& Text, int32 Shot)
 		else
 		{
 			// Strike case
-			
 			if (Shot == 1)
 			{
-				// Only allow strikes for shot 1
+				// Strikes are always allowed on Shot 11
 				Success = BowlingScoreComponent->SetScore(10);
-			} else if (FrameNumber == 10)
+			}
+			else if (IsFinalFrame())
 			{
 				// Or on Frame 10, strike is allowed ....
 				// For Shot 3 if Shot 2 was a spare
@@ -194,7 +192,7 @@ void UBowlingFrameWidget::ValidateTextEntry(const FText& Text, int32 Shot)
 	{
 		auto Score = FCString::Atoi(*StringText);
 		Success = BowlingScoreComponent->SetScore(Score);
-		
+
 		// Convert number to / or X notation
 		if (Success)
 		{
@@ -205,6 +203,7 @@ void UBowlingFrameWidget::ValidateTextEntry(const FText& Text, int32 Shot)
 
 	if (Success)
 	{
+		// Disable the box, focus will be transferred to the next box with SetCurrentGameState
 		TextBox->SetIsReadOnly(true);
 		TextBox->SetIsEnabled(false);
 	}
@@ -217,8 +216,6 @@ void UBowlingFrameWidget::ValidateTextEntry(const FText& Text, int32 Shot)
 void UBowlingFrameWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-	
-	ScoreText->SetText(FText::GetEmpty());
-	
+
 	Reset();
 }
