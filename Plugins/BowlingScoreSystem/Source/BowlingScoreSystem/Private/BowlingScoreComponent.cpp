@@ -142,7 +142,7 @@ bool UBowlingScoreComponent::IsValidShotScore(int32 Score, int32 Frame, int32 Sh
 		if (Shot < 1 or Shot > 2) { return false; }
 
 		// Don't allow shot values that would conflict with existing shots in the frame
-		if (Shot == 2 and Score + CurrentFrame.Shots[0] > 10) { return false; }
+		if (Shot == 2 and (Score + CurrentFrame.Shots[0] > 10 or CurrentFrame.Shots[0] == 10)) { return false; }
 	}
 	else if (Frame == 10)
 	{

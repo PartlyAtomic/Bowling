@@ -62,14 +62,9 @@ public:
 	// Get the specified frame's score
 	UFUNCTION(BlueprintCallable, Category=Bowling)
 	int32 GetFrameScore(int32 Frame) const;
-
-	// Check if a shot score is valid.
-	// Note: This will assume future shots in a frame are zero if a previous shot is entered
-	// For example, if shot 1 on Frame 10 is entered, the game state will be assumed to be at Frame 10 Shot 1
+	
+	// Check if a shot score is valid for the current frame and shot.
 	UFUNCTION(BlueprintCallable, Category=Bowling)
-	bool IsValidShotScore(int32 Score, int32 Frame, int32 Shot) const;
-
-	// Same as IsValidShotScore(Score, Frame, Shot) but for the current frame and shot
 	bool IsValidShotScore(int32 Score) const;
 	
 	// Attempt to set the score for the current frame and shot
@@ -102,6 +97,10 @@ public:
 	FOnBowlingGameOverSignature OnGameOver;
 
 protected:
+	// Note: This will assume future shots in a frame are zero if a previous shot is entered
+	// For example, if shot 1 on Frame 10 is entered, the game state will be assumed to be at Frame 10 Shot 1
+	bool IsValidShotScore(int32 Score, int32 Frame, int32 Shot) const;
+	
 	// Set the score for a given Frame and Shot
 	// Note: Due to time constraints this will only work for the current frame and shot, so it's not exposed
 	bool SetScore(int32 Score, int32 Frame, int32 Shot);
