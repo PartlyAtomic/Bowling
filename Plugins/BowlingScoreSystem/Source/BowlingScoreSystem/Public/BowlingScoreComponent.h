@@ -69,6 +69,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category=Bowling)
 	bool IsValidShotScore(int32 Score, int32 Frame, int32 Shot) const;
 
+	// Same as IsValidShotScore(Score, Frame, Shot) but for the current frame and shot
+	bool IsValidShotScore(int32 Score) const;
+	
 	// Attempt to set the score for the current frame and shot
 	// Return indicates whether the score was accepted
 	// Broadcasts OnGameAdvanced when score is recorded and game moves to the next shot 

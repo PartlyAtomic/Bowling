@@ -175,6 +175,11 @@ bool UBowlingScoreComponent::IsValidShotScore(int32 Score, int32 Frame, int32 Sh
 	return true;
 }
 
+bool UBowlingScoreComponent::IsValidShotScore(int32 Score) const
+{
+	return IsValidShotScore(Score, GetCurrentFrameNum(), GetCurrentShotNum());
+}
+
 bool UBowlingScoreComponent::SetScore(int32 Score)
 {
 	return SetScore(Score, GetCurrentFrameNum(), GetCurrentShotNum());
