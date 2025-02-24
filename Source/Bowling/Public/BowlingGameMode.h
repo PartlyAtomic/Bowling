@@ -19,9 +19,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category=Classes)
 	TSubclassOf<UUserWidget> BowlingScoreWidgetClass;
-	
+
 protected:
 	virtual void BeginPlay() override;
-
-	
 };

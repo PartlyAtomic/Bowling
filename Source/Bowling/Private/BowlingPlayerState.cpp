@@ -1,6 +1,5 @@
 ﻿// Partly Atomic LLC 2025
 
-
 #include "Bowling/Public/BowlingPlayerState.h"
 
 #include "BowlingScoreComponent.h"

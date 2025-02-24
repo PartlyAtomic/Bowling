@@ -21,6 +21,7 @@ void ABowlingGameMode::BeginPlay()
 		auto* BowlingScoreWidget = CreateWidget<UUserWidget>(PlayerController, BowlingScoreWidgetClass);
 		if (ensure(BowlingScoreWidget))
 		{
+			// Display widget
 			BowlingScoreWidget->AddToViewport();
 
 			// Set focus 
@@ -29,8 +30,6 @@ void ABowlingGameMode::BeginPlay()
 			InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 			PlayerController->SetInputMode(InputMode);
 			PlayerController->bShowMouseCursor = true;
-		
 		}
 	}
-	
 }
