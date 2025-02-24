@@ -76,5 +76,6 @@ protected:
 	// Check whether the text entered is a valid score
 	void ValidateTextEntry(const FText& Text, int32 Shot);
 
+protected:
 	virtual void NativeConstruct() override;
 };

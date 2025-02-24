@@ -16,41 +16,44 @@ UBowlingScoreWidget::UBowlingScoreWidget(const FObjectInitializer& ObjectInitial
 
 UBowlingScoreComponent* UBowlingScoreWidget::GetBowlingScoreComponent() const
 {
-	auto* PlayerController = GetOwningPlayer();
-	if (!ensure(PlayerController)) { return nullptr; }
-
-	auto* PlayerState = PlayerController->GetPlayerState<APlayerState>();
-	if (!ensure(PlayerState)) { return nullptr; }
+	// The BowlingScoreComponent lives on PlayerState
+	auto* PlayerState = GetOwningPlayerState();
+	if (not ensure(PlayerState)) { return nullptr; }
 
 	return PlayerState->GetComponentByClass<UBowlingScoreComponent>();
 }
 
 void UBowlingScoreWidget::Reset()
 {
+	// Reset all score frames
 	for (auto&& Child : FrameBox->GetAllChildren())
 	{
 		auto* FrameWidget = Cast<UBowlingFrameWidget>(Child);
-		if (!ensure(FrameWidget)) { continue; }
+		if (not ensure(IsValid(FrameWidget))) { continue; }
 
 		FrameWidget->Reset();
 	}
+
+	// Restart the game
 	auto* BowlingScoreComponent = GetBowlingScoreComponent();
-	
-	if (!ensure(BowlingScoreComponent)) { return; }
+	if (not ensure(IsValid(BowlingScoreComponent))) { return; }
 	BowlingScoreComponent->Reset();
 }
 
 void UBowlingScoreWidget::GameAdvanced(UBowlingScoreComponent* BowlingScoreComponent, int32 Frame, int32 Shot)
 {
 	// Scores will at most change the previous two scores. Since this could be the start of the "next" frame, go back three.
-	auto UpdateFrom = FMath::Max(0, Frame-1-3);
-	auto UpdateTo = Frame;
+	const auto UpdateFrom = FMath::Max(0, Frame - 1 - 3);
+	const auto UpdateTo = Frame;
+
 	for (auto ChildNum = 0; ChildNum < FrameBox->GetChildrenCount(); ChildNum++)
 	{
 		auto* FrameWidget = Cast<UBowlingFrameWidget>(FrameBox->GetChildAt(ChildNum));
-		if (!ensure(FrameWidget)) { continue; }
+		if (not ensure(IsValid(FrameWidget))) { continue; }
 
 		FrameWidget->SetCurrentGameState(Frame, Shot);
+
+		// Update the score if the frames are in the range that the last shot could have modified their score
 		if (ChildNum >= UpdateFrom and ChildNum < UpdateTo)
 		{
 			FrameWidget->UpdateScore();
@@ -65,8 +68,9 @@ void UBowlingScoreWidget::GameOver(UBowlingScoreComponent* BowlingScoreComponent
 	FrameNineWidget->UpdateScore();
 	auto* FrameTenWidget = Cast<UBowlingFrameWidget>(FrameBox->GetChildAt(9));
 	FrameTenWidget->UpdateScore();
+
+	// Focus on the reset button
 	SetDesiredFocusWidget(ResetButton);
-	// ResetButton->SetFocus();
 	SetFocus();
 }
 
@@ -74,9 +78,14 @@ void UBowlingScoreWidget::NativePreConstruct()
 {
 	Super::NativePreConstruct();
 
-	if (!ensure(FrameBox)) { return; }
-	if (!ensure(BowlingFrameWidgetClass)) { return; }
+	if (not ensure(FrameBox)) { return; }
+	if (not ensure(BowlingFrameWidgetClass)) { return; }
 
+	// Since I expect frame numbers to line up with the horizontal box's children,
+	// clear anything that might have been put in via designer
+	FrameBox->ClearChildren();
+
+	// Create all the frame widgets
 	for (auto i = 0; i < 10; i++)
 	{
 		auto* FrameWidget = CreateWidget<UBowlingFrameWidget>(this, BowlingFrameWidgetClass,
@@ -85,7 +94,8 @@ void UBowlingScoreWidget::NativePreConstruct()
 		FrameBox->AddChild(FrameWidget);
 	}
 
-	if (!ensure(ResetButton)) { return; }
+	// Bind to reset button
+	if (not ensure(ResetButton)) { return; }
 	ResetButton->OnClicked.AddUniqueDynamic(this, &UBowlingScoreWidget::Reset);
 }
 
@@ -94,11 +104,15 @@ void UBowlingScoreWidget::NativeConstruct()
 	Super::NativeConstruct();
 
 	auto* BowlingScoreComponent = GetBowlingScoreComponent();
-	if (!ensure(BowlingScoreComponent)) { return; }
+	if (not ensure(BowlingScoreComponent)) { return; }
 
+	// Listen to relevant game events and "start" the game
 	BowlingScoreComponent->OnGameAdvanced.AddUniqueDynamic(this, &UBowlingScoreWidget::GameAdvanced);
 	BowlingScoreComponent->OnGameOver.AddUniqueDynamic(this, &UBowlingScoreWidget::GameOver);
 	BowlingScoreComponent->Reset();
+
+	// Set focus to the first frame
+	if (not ensure(FrameBox)) { return; }
 	SetDesiredFocusWidget(FrameBox->GetChildAt(0));
 	SetFocus();
 }

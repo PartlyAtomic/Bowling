@@ -9,9 +9,9 @@
 #include "GameFramework/PlayerState.h"
 
 UBowlingFrameWidget::UBowlingFrameWidget(const FObjectInitializer& ObjectInitializer) :
-	Super(ObjectInitializer)
+	Super(ObjectInitializer), FrameNumber(0)
 {
-	FrameNumber = 0;
+	SetIsFocusable(true);
 }
 
 void UBowlingFrameWidget::SetFrame_Implementation(int32 InFrameNumber)
