@@ -392,12 +392,87 @@ TEST_CLASS(BowlingScoreTests, "Bowling.Score")
 
 	TEST_METHOD(BowlingScore_IsValidShotScore)
 	{
-		ASSERT_FAIL(TEXT("Unimplemented"));
+		// shot number
+		ASSERT_THAT(IsFalse(Bowling->IsValidShotScore(1, 1, 0)));
+		ASSERT_THAT(IsTrue(Bowling->IsValidShotScore(1, 1, 1)));
+		ASSERT_THAT(IsFalse(Bowling->IsValidShotScore(1, 1, 3)));
+
+		// frame number
+		ASSERT_THAT(IsFalse(Bowling->IsValidShotScore(1, 0, 1)));
+		ASSERT_THAT(IsTrue(Bowling->IsValidShotScore(1, 1, 1)));
+		ASSERT_THAT(IsFalse(Bowling->IsValidShotScore(1, 11, 1)));
+
+		// score
+		ASSERT_THAT(IsFalse(Bowling->IsValidShotScore(-1)));
+		ASSERT_THAT(IsTrue(Bowling->IsValidShotScore(0)));
+		ASSERT_THAT(IsTrue(Bowling->IsValidShotScore(10)));
+		ASSERT_THAT(IsFalse(Bowling->IsValidShotScore(11)));
+
+		// if it's valid, then it should be allowed to be set as well
+		ASSERT_THAT(IsTrue(Bowling->IsValidShotScore(5)));
+		ASSERT_THAT(IsTrue(Bowling->SetScore(5)));
+		
+		ASSERT_THAT(IsTrue(Bowling->IsValidShotScore(4)));
+		// And if it's not valid, it shouldn't be allowed to be set
+		ASSERT_THAT(IsFalse(Bowling->IsValidShotScore(6)));
+		ASSERT_THAT(IsFalse(Bowling->SetScore(6)));
+
+		// Spare
+		Bowling->Reset();
+		Bowling->SetScore(5);
+		ASSERT_THAT(IsTrue(Bowling->IsValidShotScore(5)));
+		ASSERT_THAT(IsTrue(Bowling->SetScore(5)));
+		
+		// strike
+		Bowling->Reset();
+		ASSERT_THAT(IsTrue(Bowling->IsValidShotScore(10)));
+		Bowling->SetScore(10);
+		// Check that even a 0 isn't valid as an entry after a strike in the frame
+		ASSERT_THAT(IsFalse(Bowling->IsValidShotScore(0, 1, 2)));
 	}
 	
 	TEST_METHOD(BowlingScore_IsValidShotScore_FrameTen)
 	{
-		ASSERT_FAIL(TEXT("Unimplemented"));
+		auto ResetToFrameTen = [this]()
+		{
+			Bowling->Reset();
+			Bowling->CurrentFrameIndex = 9;
+			Bowling->CurrentShotIndex = 0;
+		};
+		
+		// NN
+		ResetToFrameTen();
+		ASSERT_THAT(IsTrue(Bowling->IsValidShotScore(1)));
+		Bowling->SetScore(1);
+		ASSERT_THAT(IsTrue(Bowling->IsValidShotScore(1)));
+		ASSERT_THAT(IsFalse(Bowling->IsValidShotScore(10)));
+		Bowling->SetScore(1);
+		ASSERT_THAT(IsFalse(Bowling->IsValidShotScore(1)));
+
+		// N/N N/X
+		ResetToFrameTen();
+		Bowling->SetScore(1);
+		Bowling->SetScore(9);
+		ASSERT_THAT(IsTrue(Bowling->IsValidShotScore(10)));
+		ASSERT_THAT(IsTrue(Bowling->IsValidShotScore(1)));
+		Bowling->SetScore(10);
+		ASSERT_THAT(IsFalse(Bowling->IsValidShotScore(1)));
+
+		// XXX, XXN
+		ResetToFrameTen();
+		Bowling->SetScore(10);
+		ASSERT_THAT(IsTrue(Bowling->IsValidShotScore(10)));
+		Bowling->SetScore(10);
+		ASSERT_THAT(IsTrue(Bowling->IsValidShotScore(10)));
+		ASSERT_THAT(IsTrue(Bowling->IsValidShotScore(1)));
+		
+		// XNN, XN/
+		ResetToFrameTen();
+		Bowling->SetScore(10);
+		ASSERT_THAT(IsTrue(Bowling->IsValidShotScore(5)));
+		Bowling->SetScore(5);
+		ASSERT_THAT(IsTrue(Bowling->IsValidShotScore(4)));
+		ASSERT_THAT(IsFalse(Bowling->IsValidShotScore(6)));
 	}
 
 	TEST_METHOD(BowlingScore_SetScore)
