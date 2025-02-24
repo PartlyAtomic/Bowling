@@ -24,14 +24,19 @@ UBowlingScoreComponent::UBowlingScoreComponent()
 
 void UBowlingScoreComponent::Reset()
 {
+	// Reset shot and frame
 	CurrentFrameIndex = 0;
 	CurrentShotIndex = 0;
+
+	// Reset frames
 	FrameScores.Reset(10);
 	FrameScores.SetNum(10);
 	for (auto FrameIdx = 0; FrameIdx < 10; FrameIdx++)
 	{
 		FrameScores[FrameIdx].Shots.SetNum(FrameIdx == 9 ? 3 : 2);
 	}
+
+	// Broadcast reset and advance to first shot
 	OnReset.Broadcast(this);
 	OnGameAdvanced.Broadcast(this, GetCurrentFrameNum(), GetCurrentShotNum());
 }
@@ -82,38 +87,35 @@ int32 UBowlingScoreComponent::GetFrameScore(int32 Frame) const
 		Score += ShotScore;
 	}
 
+	// For once Frame 10 makes things easier
 	if (Frame == 10)
 	{
 		return Score;
 	}
-
-	auto GetRawShotScore = [this](int32 Frame, int32 Shot) -> int32
-	{
-		auto FrameIdx = Frame - 1;
-		auto ShotIdx = Shot - 1;
-		if (not FrameScores.IsValidIndex(FrameIdx)) { return 0; }
-		auto& CurrentFrame = FrameScores[FrameIdx];
-		if (not CurrentFrame.Shots.IsValidIndex(ShotIdx)) { return 0; }
-		return CurrentFrame.Shots[ShotIdx];
-	};
-
+	
 	auto ShotsToSum = 0;
 	if (IsStrike(Frame, 1))
 	{
-		// Add the score of the next two shots
+		// Add the score of the next two shots for a strike
 		ShotsToSum = 2;
 	}
 	else if (IsSpare(Frame, 2))
 	{
-		// Add the score of the next one shot
+		// Add the score of the next one shot for a spare
 		ShotsToSum = 1;
 	}
 
-	TPair<int32, int32> CurrentShot = {Frame, 2};
-	for (auto i = 0; i < ShotsToSum; i++)
+	// Sum up extra scores as necessary
+	if (ShotsToSum > 0)
 	{
-		CurrentShot = GetNextScoredShot(CurrentShot.Get<0>(), CurrentShot.Get<1>());
-		Score += GetRawShotScore(CurrentShot.Get<0>(), CurrentShot.Get<1>());
+		TPair<int32, int32> NextShotPair = GetNextScoredShot(Frame, 2);
+		for (auto i = 0; i < ShotsToSum; i++)
+		{
+			auto& NextFrame = NextShotPair.Get<0>();
+			auto& NextShot = NextShotPair.Get<1>();
+			Score += GetShotScore(NextFrame, NextShot);
+			NextShotPair = GetNextScoredShot(NextFrame, NextShot);
+		}
 	}
 
 	return Score;
@@ -123,9 +125,7 @@ bool UBowlingScoreComponent::IsValidShotScore(int32 Score, int32 Frame, int32 Sh
 {
 	auto FrameIdx = Frame - 1;
 	auto ShotIdx = Shot - 1;
-
-	// Basic input checking.
-
+	
 	// Number of pins must be between 0 and 10
 	if (Score < 0 or Score > 10)
 	{
@@ -144,21 +144,20 @@ bool UBowlingScoreComponent::IsValidShotScore(int32 Score, int32 Frame, int32 Sh
 		// Don't allow shot values that would conflict with existing shots in the frame
 		if (Shot == 2 and Score + CurrentFrame.Shots[0] > 10) { return false; }
 	}
-
-	// Possible frame 10 states:
-	// XXX, XXN, XNN, XN/
-	// N/X, N/N
-	// NN
-
-	if (Frame == 10)
+	else if (Frame == 10)
 	{
+		// Possible frame 10 states:
+		// XXX, XXN, XNN, XN/
+		// N/X, N/N
+		// NN
+		
 		// Frame 10 only has max three shots
 		if (Shot < 1 or Shot > 3) { return false; }
 
 		// If Shot 1 was not a strike, then Shot 2 can only be up to a spare
 		if (Shot == 2 and CurrentFrame.Shots[0] != 10 and (Score + CurrentFrame.Shots[0] > 10)) { return false; }
 
-		// THINK: This might be covered by the previous rule..
+		// Thought: This might be covered by the previous rule..
 		// Ten pins on shot 2 means Shot 1 must be a strike or 0
 		// if (Shot == 2 and Score == 10 and not (CurrentFrame.Shots[0] == 10 or CurrentFrame.Shots[0] == 0)) { return false; }
 
@@ -169,8 +168,8 @@ bool UBowlingScoreComponent::IsValidShotScore(int32 Score, int32 Frame, int32 Sh
 		}
 
 		// If Shot 1 was a strike and Shot 2 wasn't (so the pins weren't reset for Shot 3), then Shot 3 can only be up to a spare
-		if (Shot == 3 and CurrentFrame.Shots[0] == 10 and CurrentFrame.Shots[1] != 10 and (Score + CurrentFrame.Shots[2]
-			> 10)) { return false; }
+		if (Shot == 3 and CurrentFrame.Shots[0] == 10
+			and CurrentFrame.Shots[1] != 10 and (Score + CurrentFrame.Shots[2]> 10)) { return false; }
 	}
 
 	return true;
@@ -199,6 +198,7 @@ bool UBowlingScoreComponent::SetScore(int32 Score, int32 Frame, int32 Shot)
 		return false;
 	}
 
+	// Record the score
 	FrameScores[FrameIdx].Shots[ShotIdx] = Score;
 
 	auto IsGameOver = false;
@@ -208,10 +208,9 @@ bool UBowlingScoreComponent::SetScore(int32 Score, int32 Frame, int32 Shot)
 	{
 		if (Shot == 1)
 		{
-			// Shot 1 always advances, but a strike will advance to the next frame
 			if (Score == 10)
 			{
-				// A strike will advance frames
+				// A strike will advance frame
 				CurrentShotIndex = ShotIdx;
 				CurrentFrameIndex = FrameIdx + 1;
 			}
@@ -221,7 +220,8 @@ bool UBowlingScoreComponent::SetScore(int32 Score, int32 Frame, int32 Shot)
 				CurrentShotIndex = ShotIdx + 1;
 				CurrentFrameIndex = FrameIdx;
 			}
-		} else if (Shot == 2)
+		}
+		else if (Shot == 2)
 		{
 			// Shot 2 on frames other than 10 advances to the next frame
 			CurrentShotIndex = 0;
@@ -238,14 +238,15 @@ bool UBowlingScoreComponent::SetScore(int32 Score, int32 Frame, int32 Shot)
 		}
 		if (Shot == 2)
 		{
-			// Third shot is only allowed if there's a Strike on Shot 1 or Spare on Shot 2
 			if (IsStrike(10, 1) or IsSpare(10, 2))
 			{
+				// Third shot is only allowed if there's a Strike on Shot 1 or Spare on Shot 2
 				CurrentShotIndex = ShotIdx + 1;
 				CurrentFrameIndex = FrameIdx;
 			}
 			else
 			{
+				// Otherwise it's game over
 				CurrentFrameIndex = FrameIdx + 1;
 				CurrentShotIndex = 0;
 				IsGameOver = true;
@@ -253,6 +254,7 @@ bool UBowlingScoreComponent::SetScore(int32 Score, int32 Frame, int32 Shot)
 		}
 		else if (Shot == 3)
 		{
+			// Third shot is always a game over
 			CurrentFrameIndex = FrameIdx + 1;
 			CurrentShotIndex = 0;
 			IsGameOver = true;
@@ -355,5 +357,6 @@ TPair<int32, int32> UBowlingScoreComponent::GetNextScoredShot(int32 Frame, int32
 void UBowlingScoreComponent::InitializeComponent()
 {
 	Super::InitializeComponent();
+	
 	Reset();
 }
