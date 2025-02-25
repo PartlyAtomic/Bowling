@@ -138,6 +138,19 @@ void UBowlingFrameWidget::ValidateTextEntry(const FText& Text, int32 Shot)
 		return;
 	}
 
+	// Custom IsNumeric function since FString::IsNumeric will accept ".", "+", and "-"
+	auto IsNumeric = [](const FString& String) -> bool
+	{
+		if (String.IsEmpty()) { return false; }
+		
+		for (auto&& C : String)
+		{
+			if (C < '0' or C > '9') { return false; }
+		}
+
+		return true;
+	};
+	
 	auto Success = false;
 
 	if (StringText == "X" or StringText == "x" or StringText == "/")
@@ -188,7 +201,7 @@ void UBowlingFrameWidget::ValidateTextEntry(const FText& Text, int32 Shot)
 			}
 		}
 	}
-	else if (StringText.IsNumeric())
+	else if (IsNumeric(StringText))
 	{
 		auto Score = FCString::Atoi(*StringText);
 		Success = BowlingScoreComponent->SetScore(Score);
