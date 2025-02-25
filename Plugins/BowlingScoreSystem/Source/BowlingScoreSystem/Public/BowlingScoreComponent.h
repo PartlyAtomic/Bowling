@@ -7,7 +7,7 @@
 #include "BowlingScoreComponent.generated.h"
 
 USTRUCT()
-struct FBowlingFrameScore
+struct BOWLINGSCORESYSTEM_API FBowlingFrameScore
 {
 	GENERATED_BODY()
 
