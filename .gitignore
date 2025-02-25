@@ -1,3 +1,6 @@
+# Ignore builds
+Builds/
+
 # Rider IDE files
 .idea/
 _ReSharper.Caches/
